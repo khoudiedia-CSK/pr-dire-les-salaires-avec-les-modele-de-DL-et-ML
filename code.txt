@@ -1,0 +1,251 @@
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, LabelEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+# Chargement des données
+df = pd.read_csv('jobs_in_data.csv')
+
+# Afficher un aperçu
+print(df.head())
+
+# -------------------------
+# 1. Nettoyage & sélection des colonnes
+# -------------------------
+
+# On va garder uniquement les colonnes importantes pour prédire le salaire
+# Je retire : work_year (toutes les données sont sur 2022/2023), salary (car on utilise salary_in_usd),
+# on garde salary_in_usd comme target
+
+features = [
+    'job_title',
+    'job_category',
+    'salary_currency',    # utile pour vérifier si on a bien salary_in_usd cohérent
+    'employee_residence',
+    'experience_level',
+    'employment_type',
+    'work_setting',
+    'company_location',
+    'company_size'
+]
+
+X = df[features]
+y = df['salary_in_usd']
+
+# -------------------------
+# 2. Gestion des outliers sur y
+y = y.astype(float)
+upper_limit = y.quantile(0.99)
+y_clipped = y.clip(upper=upper_limit)
+
+# 3. Encodage des variables catégorielles
+cat_cols = X.columns.tolist()
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), cat_cols)
+    ]
+)
+
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+
+# 1. Charger les données (si ce n’est pas déjà fait)
+df = pd.read_csv('jobs_in_data.csv')
+
+# 2. Sélection des features et target
+X = df.drop(columns=['salary_in_usd'])  # On prédit salary_in_usd
+y = df['salary_in_usd']
+
+# 3. Séparation features catégorielles
+cat_cols = X.select_dtypes(include=['object']).columns.tolist()
+
+# 4. Split train/test
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# 5. Pipeline prétraitement + modèle
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('cat', OneHotEncoder(handle_unknown='ignore'), cat_cols)
+    ],
+    remainder='passthrough'  # on garde les autres colonnes numériques (ici work_year)
+)
+
+pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('model', RandomForestRegressor(random_state=42, n_estimators=100))
+])
+
+# 6. Entraînement
+pipeline.fit(X_train, y_train)
+
+# 7. Prédiction et évaluation
+y_pred = pipeline.predict(X_test)
+print(f"MSE: {mean_squared_error(y_test, y_pred):.2f}")
+print(f"R2 score: {r2_score(y_test, y_pred):.4f}")
+
+
+import numpy as np
+import tensorflow as tf
+from sklearn.preprocessing import StandardScaler
+
+# 1. Prétraitement avec OneHotEncoder + passer à numpy
+X_cat_encoded = OneHotEncoder(handle_unknown='ignore').fit_transform(X[cat_cols]).toarray()
+X_num = X.drop(columns=cat_cols).values  # numérique (work_year)
+
+X_all = np.hstack([X_num, X_cat_encoded])
+
+# 2. Normalisation features
+scaler_X = StandardScaler()
+X_all_scaled = scaler_X.fit_transform(X_all)
+
+# 3. Normalisation target
+scaler_y = StandardScaler()
+y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
+
+# 4. Split train/test
+X_train_dl, X_test_dl, y_train_dl, y_test_dl = train_test_split(
+    X_all_scaled, y_scaled, test_size=0.2, random_state=42
+)
+
+# 5. Créer modèle Keras simple
+model = tf.keras.Sequential([
+    tf.keras.layers.Dense(128, activation='relu', input_shape=(X_train_dl.shape[1],)),
+    tf.keras.layers.Dense(64, activation='relu'),
+    tf.keras.layers.Dense(1)  # sortie continue
+])
+
+model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+
+# 6. Entraînement
+model.fit(X_train_dl, y_train_dl, epochs=50, batch_size=32, validation_split=0.2)
+
+# 7. Évaluation
+loss, mae = model.evaluate(X_test_dl, y_test_dl)
+print(f"Test MAE: {mae:.4f}")
+
+# 8. Prédiction exemple (désencodage cible)
+y_pred_dl = model.predict(X_test_dl)
+y_pred_original = scaler_y.inverse_transform(y_pred_dl)
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import mean_squared_error, r2_score
+
+# 1. Calcul des métriques
+rmse_ml = np.sqrt(mean_squared_error(y_test, y_pred_rf))
+r2_ml = r2_score(y_test, y_pred_rf)
+
+# 2. Plot
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x=y_test, y=y_pred_rf, alpha=0.4, color='royalblue', edgecolor=None)
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color='red', linestyle='--', linewidth=2)
+plt.title(f"📘 Machine Learning - Prédiction vs Réel\nRMSE: {rmse_ml:.2f}, R²: {r2_ml:.4f}")
+plt.xlabel("Salaire réel (USD)")
+plt.ylabel("Salaire prédit (USD)")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+
+Ce code Python (avec matplotlib) sert à visualiser les performances de ton modèle de Machine Learning (ML) en traçant un graphe des valeurs réelles contre les valeurs prédites.
+ Voici ce qu’il fait étape par étape :
+import matplotlib.pyplot as plt
+
+# Graphique pour ML : Réel vs Prédit
+plt.figure(figsize=(8, 6))
+plt.scatter(y_test, y_pred, color='blue', alpha=0.4, label='Prédictions ML')
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', label='Idéal')
+plt.xlabel("Salaires réels (USD)")
+plt.ylabel("Salaires prédits (USD)")
+plt.title("ML - Réel vs Prédit")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+# -------------------------
+# 3. Encodage des variables catégorielles
+# -------------------------
+
+# Colonnes catégorielles à encoder
+cat_cols = X.columns.tolist()
+
+# On va appliquer OneHotEncoder pour toutes les colonnes catégorielles
+# Si trop de catégories, on peut réduire ou utiliser un TargetEncoder, mais là on fait simple
+
+# Pipeline de transformation des features
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('cat', OneHotEncoder(handle_unknown='ignore', sparse=False), cat_cols)
+    ]
+)
+
+# -------------------------
+# 4. Normalisation des variables numériques (aucune variable numérique à transformer dans X)
+# Ici, le seul numérique est la target y_clipped (le salaire)
+# -------------------------
+
+scaler_y = StandardScaler()
+y_scaled = scaler_y.fit_transform(y_clipped.values.reshape(-1,1)).flatten()
+
+# -------------------------
+# 5. Split train/test
+# -------------------------
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y_scaled, test_size=0.2, random_state=42
+)
+
+# -------------------------
+# 6. Construction du pipeline complet (juste encodage pour X)
+# -------------------------
+
+X_train_transformed = preprocessor.fit_transform(X_train)
+X_test_transformed = preprocessor.transform(X_test)
+
+print(f"X_train shape after encoding: {X_train_transformed.shape}")
+print(f"X_test shape after encoding: {X_test_transformed.shape}")
+
+# y_train et y_test sont prêts pour ML/DL (normalisés)
+
+# -------------------------
+# Tu peux maintenant utiliser X_train_transformed, y_train pour entraîner tes modèles ML ou DL.
+# -------------------------
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+plt.figure(figsize=(10, 7))
+
+# Scatter ML (Random Forest)
+sns.scatterplot(x=y_test, y=y_pred, color='blue', alpha=0.5, label='Prédictions ML (RF)')
+
+# Scatter DL (Deep Learning)
+sns.scatterplot(x=y_test, y=y_pred_dl.flatten(), color='green', alpha=0.5, label='Prédictions DL (NN)')
+
+# Droite idéale y = x
+lims = [min(y_test.min(), y_pred.min(), y_pred_dl.min()), max(y_test.max(), y_pred.max(), y_pred_dl.max())]
+plt.plot(lims, lims, 'r--', label='Prédiction idéale')
+
+plt.xlabel("Salaire réel (USD)")
+plt.ylabel("Salaire prédit (USD)")
+plt.title("Comparaison des prédictions : ML (Random Forest) vs DL (Réseau Neurones)")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
