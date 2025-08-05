@@ -35,6 +35,7 @@ Les données utilisées sont issues du fichier `jobs_in_data.csv` contenant des 
 
 ---
 Modèle Machine Learning : Random Forest
+
 Le Random Forest est un modèle d’ensemble très utilisé en Machine Learning. Il combine plusieurs arbres de décision, chacun entraîné sur une sous-partie des données, pour faire des prédictions plus robustes et précises.
 
 Principaux points :
